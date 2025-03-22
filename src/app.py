@@ -2,88 +2,129 @@ import streamlit as st
 import os
 from PIL import Image
 import uuid
+import tempfile
 from services.agent_service import make_query_to_agent
+from services.memory_service import leave_room
 
-# Configuración de la página
-# Set page configuration FIRST before anything else
-st.set_page_config(
-    page_icon="./resources/intelligent-assistant_12775374.png",
-    page_title="Brain Tumor Diagnosis Agent",
-    layout="wide"
-)
-
-# Custom CSS to move the title closer to the top
-st.markdown(
-    """
-        <style>
-                .stAppHeader {
-                    background-color: rgba(255, 255, 255, 0.0);  /* Transparent background */
-                    visibility: visible;  /* Ensure the header is visible */
-                }
-
-               .block-container {
-                    padding-top: 1rem;
-                    padding-bottom: 0rem;
-                    padding-left: 5rem;
-                    padding-right: 5rem;
-                }
-
-                div[class^='st-emotion-cache-10oheav'] { padding-top: 0rem; }
-        </style>
-        """,
-    unsafe_allow_html=True,
-)
-
-#st.markdown(" <style> div[class^='st-emotion-cache-10oheav'] { padding-top: 0rem; } </style> ", unsafe_allow_html=True)
-# give title to the page
 st.title("🧠 Brain Tumor Diagnosis Agent")
 
+def del_image(temp_path):
+    if temp_path and os.path.exists(temp_path):
+        os.remove(temp_path)
+        print(f"Deleted temp image: {temp_path}")  # Debugging
+        st.session_state['temp_path'] = None
+        st.session_state["send_image"] = False
+
+def change_send_image():
+    st.session_state["send_image"] = st.session_state["checkbox"]
+
+# Ensure chat ID is persistent
+if 'chatId' not in st.session_state:
+    st.session_state.chatId = str(uuid.uuid4())  # Store as string
 
 if 'messages' not in st.session_state:
     st.session_state['messages'] = []
 
-st.session_state.chatId = uuid.uuid4
+if 'temp_path' not in st.session_state:
+    st.session_state['temp_path'] = None
 
-# Sidebar con opción de ocultar
+if 'send_image' not in st.session_state:
+    st.session_state['send_image'] = False  # Default is False
+
+if "uploader_key" not in st.session_state:
+    st.session_state["uploader_key"] = 1
+
+
+
+print(f"send image: {st.session_state['send_image']}, temp_path: {st.session_state['temp_path']} chatid: {st.session_state.chatId}")
+
+# Sidebar for new chat and model selection
 with st.sidebar:
-    col1, col2 = st.columns([1, 1])  # Adjust column widths if needed
+    col1, col2 = st.columns([1, 1])
 
     with col1:
         if st.button("➕ New Chat"):
-            st.session_state.chat_history = []
-            st.session_state.chatId = uuid.uuid4()
-            print(st.session_state.chatId)
+            leave_room(st.session_state.chatId)
+            st.session_state.chatId = str(uuid.uuid4())  # Reset chat ID
             st.session_state['messages'] = []
+            st.session_state['temp_path'] = None  # Reset image
+            st.session_state['send_image'] = False  # Reset checkbox
+            st.session_state['uploaded_file'] = None  # Clear uploaded file
+            st.session_state["uploader_key"] += 1
             st.rerun()
 
     with col2:
         selected_option = st.selectbox(
-            "Select Option",  # Label (will be hidden in sidebar)
-            ["Qwen2.5", "gpt-4o-mini"],  # Options
-            label_visibility="collapsed"  # Hides the label
+            "Select Option",  
+            ["Qwen2.5", "gpt-4o-mini"],  
+            label_visibility="collapsed"
         )
-    
+
+        if selected_option == 'gpt-4o-mini':
+            print('changed option')
+            st.session_state['send_image'] = False
+
     st.write("## Upload MRI Image")
-    uploaded_file = st.file_uploader("Upload MRI Image", type=["png", "jpg", "jpeg"], label_visibility='hidden')
+    uploaded_file = st.file_uploader("Upload MRI Image", 
+                                     type=["png", "jpg", "jpeg"], 
+                                     label_visibility='hidden',
+                                     key=st.session_state["uploader_key"]
+                                     )
+
+    # Store uploaded file in session state
     if uploaded_file:
-        image = Image.open(uploaded_file)
-        st.image(image, caption="Image Previewer", use_container_width=True)
+        st.session_state['uploaded_file'] = uploaded_file  # Save uploaded file
+    else:
+        st.session_state['uploaded_file'] = None  # Ensure it's cleared when no file is present
 
+    # Checkbox to send image
+    st.checkbox("Send image to Agent", 
+                value = st.session_state['send_image'], 
+                key = 'checkbox',
+                on_change=change_send_image, 
+                args = ()
+                )
 
-# update the interface with the previous messages
+    # Update session state with checkbox value 
+
+    if st.session_state['uploaded_file']:
+        file_bytes = st.session_state['uploaded_file'].read()
+        image = Image.open(st.session_state['uploaded_file'])
+        st.image(image, caption="Image Preview", use_container_width=True)
+
+        # Save temp image only if checkbox is checked
+        if st.session_state["send_image"] and not st.session_state["temp_path"]:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp_file:
+                temp_file.write(file_bytes)
+                st.session_state["temp_path"] = temp_file.name  # Save to session state
+                print(f"Temp image saved: {st.session_state['temp_path']}")  # Debugging
+
+# Display chat history
 for message in st.session_state['messages']:
     with st.chat_message(message['role']):
         st.markdown(message['content'])
 
-# create the chat interface
+# Handle user input
 if prompt := st.chat_input("Enter your query"):
     st.session_state['messages'].append({"role": "user", "content": prompt})
     with st.chat_message('user'):
         st.markdown(prompt)
 
-    # get response from the model
+    # Get response from model
     with st.chat_message('assistant'):
-        response = st.write(make_query_to_agent(prompt))
+        chat_id = st.session_state.chatId
+        temp_path = st.session_state["temp_path"]  # Use stored temp path
+
+        with st.spinner("Processing request..."):
+            response = make_query_to_agent(chat_id, prompt, temp_path)
+            print(f"Agent Response: {response}")  # Debugging
+
+        st.write(response)
+
+    # Store response in session state
     st.session_state['messages'].append({"role": "assistant", "content": response})
 
-    # handle message overflow based on the model size
+    # Cleanup temp file after agent processes it
+    del_image(temp_path)
+
+    st.rerun()  # Force UI update

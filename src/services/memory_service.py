@@ -5,18 +5,15 @@ import config.config as config
 from uuid import UUID
 
 
-def make_query_to_agent(chat_id: UUID, prompt: str, image_path: str = None):    
+def leave_room(chat_id: UUID):    
     post_data = {
-        "input": prompt,
         "chat_id": str(chat_id)
     }
 
     try:
-        if image_path:
-            post_data["image_path"] = image_path
 
         response = requests.post(
-            url=config.agent_url,
+            url=config.leave_room_url,
             headers=config.headers,
             data=json.dumps(post_data)
         )
@@ -30,4 +27,4 @@ def make_query_to_agent(chat_id: UUID, prompt: str, image_path: str = None):
 
     except Exception as err:
         print("Error extracting response:", err)
-        return "There are no available agents"
+        return "Error leaving room"
