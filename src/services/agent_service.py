@@ -5,10 +5,11 @@ import config.config as config
 from uuid import UUID
 
 
-def make_query_to_agent(chat_id: UUID, prompt: str, image_path: str = None):    
+def make_query_to_agent(chat_id: UUID, prompt: str, engine: str, image_path: str = None):    
     post_data = {
         "input": prompt,
-        "chat_id": str(chat_id)
+        "chat_id": str(chat_id),
+        "engine": engine,
     }
 
     try:

@@ -6,6 +6,12 @@ import tempfile
 from services.agent_service import make_query_to_agent
 from services.memory_service import leave_room
 
+st.set_page_config(
+    page_title="Brain Tumor Diagnosis Agent",  
+    page_icon="🧠",                           
+    layout="centered"                       
+)
+
 st.title("🧠 Brain Tumor Diagnosis Agent")
 
 def del_image(temp_path):
@@ -56,13 +62,9 @@ with st.sidebar:
     with col2:
         selected_option = st.selectbox(
             "Select Option",  
-            ["Qwen2.5", "gpt-4o-mini"],  
+            ["Qwen2.5", "GPT-4o-mini"],  
             label_visibility="collapsed"
         )
-
-        if selected_option == 'gpt-4o-mini':
-            print('changed option')
-            st.session_state['send_image'] = False
 
     st.write("## Upload MRI Image")
     uploaded_file = st.file_uploader("Upload MRI Image", 
@@ -114,9 +116,11 @@ if prompt := st.chat_input("Enter your query"):
     with st.chat_message('assistant'):
         chat_id = st.session_state.chatId
         temp_path = st.session_state["temp_path"]  # Use stored temp path
+        engine = selected_option.lower()
+        print(engine)
 
         with st.spinner("Processing request..."):
-            response = make_query_to_agent(chat_id, prompt, temp_path)
+            response = make_query_to_agent(chat_id, prompt, engine, temp_path)
             print(f"Agent Response: {response}")  # Debugging
 
         st.write(response)
