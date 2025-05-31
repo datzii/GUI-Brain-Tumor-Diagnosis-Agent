@@ -2,6 +2,18 @@
 
 GUI interface to chat with the Brain Tumor Diagnosis Agent. 
 
-A first version of the wireframe of the GUI:
+## 🚀 Getting Started
 
-![GUI wireframe](src/resources/Desktop%20-%201.png)
+### 1. Create a Virtual Environment and Install Dependencies
+
+```bash
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 2. Start the GUI
+```bash
+cd src
+streamlit run app.py
+```

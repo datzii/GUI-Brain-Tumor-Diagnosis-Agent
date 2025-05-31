@@ -6,14 +6,17 @@ import tempfile
 from services.agent_service import make_query_to_agent
 from services.memory_service import leave_room
 
+# Set config page
 st.set_page_config(
     page_title="Brain Tumor Diagnosis Agent",  
     page_icon="🧠",                           
     layout="centered"                       
 )
 
+# Set title of the page
 st.title("🧠 Brain Tumor Diagnosis Agent")
 
+# Helper function to delete temp images
 def del_image(temp_path):
     if temp_path and os.path.exists(temp_path):
         os.remove(temp_path)
@@ -21,12 +24,13 @@ def del_image(temp_path):
         st.session_state['temp_path'] = None
         st.session_state["send_image"] = False
 
+# Helper function to change state based on checkbox
 def change_send_image():
     st.session_state["send_image"] = st.session_state["checkbox"]
 
-# Ensure chat ID is persistent
+# Define state variables
 if 'chatId' not in st.session_state:
-    st.session_state.chatId = str(uuid.uuid4())  # Store as string
+    st.session_state.chatId = str(uuid.uuid4()) 
 
 if 'messages' not in st.session_state:
     st.session_state['messages'] = []
@@ -99,7 +103,7 @@ with st.sidebar:
             with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp_file:
                 temp_file.write(file_bytes)
                 st.session_state["temp_path"] = temp_file.name  # Save to session state
-                print(f"Temp image saved: {st.session_state['temp_path']}")  # Debugging
+                print(f"Temp image saved: {st.session_state['temp_path']}") 
 
 # Display chat history
 for message in st.session_state['messages']:

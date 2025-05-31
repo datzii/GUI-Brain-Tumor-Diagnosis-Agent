@@ -4,11 +4,11 @@ import base64
 import config.config as config  
 from uuid import UUID
 
-
-def make_query_to_agent(chat_id: UUID, prompt: str, engine: str, image_path: str = None):    
+# Function to send a query to the agent
+def make_query_to_agent(chat_id: str, prompt: str, engine: str, image_path: str = None):    
     post_data = {
         "input": prompt,
-        "chat_id": str(chat_id),
+        "chat_id": chat_id,
         "engine": engine,
     }
 

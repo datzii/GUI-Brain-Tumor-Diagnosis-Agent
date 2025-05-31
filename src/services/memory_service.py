@@ -4,10 +4,10 @@ import base64
 import config.config as config  
 from uuid import UUID
 
-
-def leave_room(chat_id: UUID):    
+# Function to leave memory of the agent
+def leave_room(chat_id: str):    
     post_data = {
-        "chat_id": str(chat_id)
+        "chat_id": chat_id
     }
 
     try:
